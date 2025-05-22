@@ -82,36 +82,37 @@
             align-items: center;
             justify-content: center;
             font-size: 0.875rem;
-            /* Match chord box sizing */
+            /* Match chord box sizing exactly */
             flex-grow: 1;
             basis: 0;
-            padding: 0.5rem;
-            min-width: auto;
+            padding: 0.5rem; /* Match p-2 */
         }
         
-        /* Responsive sizing to match chord boxes */
+        /* Responsive sizing to match chord boxes exactly */
         @media (min-width: 640px) {
             .lock-button {
                 flex: none;
                 min-width: 4.5rem;
-                padding: 0.5rem;
+                padding: 0.5rem; /* Keep consistent with p-2 */
             }
         }
         
         @media (min-width: 768px) {
             .lock-button {
+                flex: none;
                 min-width: 5.5rem;
-                padding: 0.5rem;
+                padding: 0.5rem; /* Keep consistent with p-2 */
             }
         }
         
         @media (min-width: 1024px) {
             .lock-button {
+                flex: none;
                 min-width: 7rem;
-                padding: 1rem;
+                padding: 0.5rem; /* Keep consistent with p-2 */
             }
         }
-        
+
         .lock-button:hover {
             background-color: #f3f4f6;
             border-color: #5e81ca;
@@ -132,6 +133,8 @@
             gap: 0.25rem;
             /* Match chord box container styling */
             flex-wrap: wrap;
+            /* Add matching padding to align with chord progression container */
+            padding: 1rem; /* Match the p-4 on chordProgressionOutput */
         }
         
         /* Responsive gap matching for lock buttons */
@@ -659,12 +662,13 @@
 
         function styleChordBox(element, isHighlighted, usePlaceholderStyle) {
             element.className = ''; // Clear existing classes first
-            // Updated baseClasses with proper square aspect ratio for mobile
+            // Updated baseClasses with consistent padding across all screen sizes
             const baseClasses = "border rounded-lg font-semibold shadow text-center " +
-                                "flex-grow basis-0 aspect-square flex items-center justify-center p-2 text-4xl " + 
-                                "sm:flex-none sm:aspect-square sm:p-2 sm:text-4xl sm:min-w-[4.5rem] " +           
-                                "md:flex-none md:aspect-square md:px-2 md:py-2 md:text-4xl md:min-w-[5.5rem] " +    
-                                "lg:flex-none lg:aspect-square lg:px-4 lg:py-4 lg:text-4xl lg:min-w-[7rem]";       
+                                "flex-grow basis-0 aspect-square flex items-center justify-center text-4xl " + 
+                                "p-2 " +                                                                           // Consistent padding at all sizes
+                                "sm:flex-none sm:aspect-square sm:min-w-[4.5rem] " +           
+                                "md:flex-none md:aspect-square md:min-w-[5.5rem] " +    
+                                "lg:flex-none lg:aspect-square lg:min-w-[7rem]";       
             
             let specificClasses = "";
 
