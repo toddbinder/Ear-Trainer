@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ear Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Application Structure Plan: Single-view, task-oriented.
+        - Header: Title.
+        - Main Content Area:
+            - Status Display: Real-time feedback.
+            - Progression Display: Shows placeholder boxes or revealed chords.
+            - Controls: Start/Next, Stop/Resume toggle button, Reveal button, BPM Slider, Instrument Selector, Genre Selector.
+        - Footer: Closing message.
+        Added more instruments, Stop/Resume functionality, and expanded genres/progressions.
+    -->
+    <!-- Visualization & Content Choices:
+        - Report Info: User requirements for more sounds, Stop/Resume, and expanded content.
+        - Goal: Interactive ear training with richer options and more intuitive playback control.
+        - Viz/Presentation Method:
+            - Chord Progressions (Data): Expanded JS array with new genres (4-chord, major/minor only).
+            - Audio Playback (Interaction): Tone.js PolySynth with more configurations.
+            - User Controls (Interaction): HTML buttons (Stop/Resume toggle), range slider, select dropdowns (Tailwind).
+            - BPM Display (Presentation): Dynamic text.
+            - Status Messages (Presentation): Dynamic text.
+            - Chord Placeholders & Reveal (Presentation): Dynamically generated HTML spans.
+        - Interaction: Click, slider, select.
+        - Library/Method: Vanilla JS, Tone.js, Tailwind CSS.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #a0b2df; /* Palette: mid-light blue (kept for contrast) */
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #14b8a6; /* Teal-600 */
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #14b8a6; /* Teal-600 */
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 2px rgba(0,0,0,0.3);
+        }
+         .beat-pulse-animation {
+            animation: beatPulseEffect 0.2s ease-out; /* Slightly adjusted duration, can be tuned */
+        }
+        @keyframes beatPulseEffect {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.8; } /* Adjusted scale and opacity */
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .control-select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #a0b2df; /* Palette: mid-light */
+            border-radius: 0.5rem;
+            background-color: white; /* Keep select background white for readability */
+            color: #2e4064; /* Palette: text-darker */
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .control-select:focus {
+            outline: none;
+            border-color: #5e81ca; /* Palette: accent-primary */
+            box-shadow: 0 0 0 2px #7e99d7; /* Palette: accent-mid (for ring) */
+        }
+        .control-select:disabled {
+            background-color: #c0cbe9; /* Palette: bg-lighter */
+            border-color: #a0b2df;
+            color: #7e99d7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-[#dfe4f3] text-[#202c45] flex flex-col min-h-screen items-center justify-center p-4">
+
+    <div class="app-container bg-white shadow-xl rounded-xl p-6 md:p-10 w-full max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-teal-700">Ear Trainer</h1>
+        </header>
+
+        <main>
+            <section class="progression-display-area text-center mb-8"> 
+                <div id="chordProgressionOutput" class="min-h-[120px] p-4 bg-green-50 rounded-lg border border-green-200 flex flex-wrap justify-center items-center gap-1 sm:gap-2 md:gap-3">
+                    </div>
+            </section>
+
+            <section class="controls-area text-center"> 
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-3 mb-6">
+                    <button id="playNextButton" class="w-full sm:w-auto text-lg py-5 px-4 sm:text-base sm:py-3 sm:px-6 text-white rounded-lg shadow-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-75 transition-all duration-150 ease-in-out bg-teal-600 hover:bg-teal-700 focus:ring-teal-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:opacity-100 disabled:hover:bg-gray-400 flex items-center justify-center gap-2">
+                        <i class="fas fa-play"></i><span id="playNextButtonText">Start / Next</span>
+                    </button>
+                    <button id="stopResumeButton" class="w-full sm:w-auto text-lg py-5 px-4 sm:text-base sm:py-3 sm:px-6 text-white rounded-lg shadow-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-75 transition-all duration-150 ease-in-out bg-red-600 hover:bg-red-700 focus:ring-red-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:opacity-100 disabled:hover:bg-gray-400 flex items-center justify-center gap-2" disabled>
+                        <i id="stopResumeIcon" class="fas fa-stop"></i><span id="stopResumeButtonText">Stop</span>
+                    </button>
+                    <button id="revealButton" class="w-full sm:w-auto text-lg py-5 px-4 sm:text-base sm:py-3 sm:px-6 text-white rounded-lg shadow-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-75 transition-all duration-150 ease-in-out bg-teal-600 hover:bg-teal-700 focus:ring-teal-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:opacity-100 disabled:hover:bg-gray-400 flex items-center justify-center gap-2" disabled>
+                        <i class="fas fa-eye"></i><span>Reveal Chords</span>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-xl mx-auto items-end">
+                    <div class="bpm-control-area md:col-span-1">
+                        <label for="bpmSlider" class="block text-sm font-medium text-[#3d5584] mb-1"><i class="fas fa-tachometer-alt mr-1"></i>Tempo: <span id="bpmValueDisplay">90</span> BPM</label>
+                        <input type="range" id="bpmSlider" min="60" max="180" value="90" class="w-full">
+                    </div>
+                    <div class="instrument-control-area md:col-span-1">
+                        <label for="instrumentSelector" class="block text-sm font-medium text-[#3d5584] mb-1"><i class="fas fa-guitar mr-1"></i>Instrument Sound:</label>
+                        <select id="instrumentSelector" class="control-select">
+                            <option value="default">Default Synth</option>
+                            <option value="pluckySynth">Plucky Synth</option>
+                            <option value="gentlePluck">Gentle Pluck</option>
+                            <option value="brightString">Bright String</option>
+                            <option value="electricPiano">Electric Piano</option>
+                            <option value="synthLead">Synth Lead</option>
+                        </select>
+                    </div>
+                    <div class="genre-control-area md:col-span-1">
+                        <label for="genreSelector" class="block text-sm font-medium text-[#3d5584] mb-1"><i class="fas fa-music mr-1"></i>Genre:</label>
+                        <select id="genreSelector" class="control-select">
+                            <option value="All">All</option>
+                            <option value="Rock">Rock</option>
+                            <option value="Classic Rock">Classic Rock</option>
+                            <option value="Pop">Pop</option>
+                            <option value="Folk">Folk</option>
+                            <option value="Blues">Blues</option>
+                            <option value="Bluegrass">Bluegrass</option>
+                            <option value="Jamgrass">Jamgrass</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-10 pt-6 border-t border-gray-300">
+            <p class="text-gray-600 text-sm"></p>
+        </footer>
+    </div>
+
+    <script>
+        const playNextButton = document.getElementById('playNextButton');
+        const playNextButtonText = document.getElementById('playNextButtonText');
+        const stopResumeButton = document.getElementById('stopResumeButton'); 
+        const stopResumeIcon = document.getElementById('stopResumeIcon');
+        const stopResumeButtonText = document.getElementById('stopResumeButtonText');
+        const revealButton = document.getElementById('revealButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const chordProgressionOutput = document.getElementById('chordProgressionOutput');
+        const bpmSlider = document.getElementById('bpmSlider');
+        const bpmValueDisplay = document.getElementById('bpmValueDisplay');
+        const instrumentSelector = document.getElementById('instrumentSelector');
+        const genreSelector = document.getElementById('genreSelector');
+        
+        let audioInitialized = false;
+        let currentProgression = null;
+        let toneSequence = null;
+        let currentBPM = 90; 
+        const HITS_PER_CHORD = 4;
+        const DURATION_PER_HIT = "4n"; 
+        let synth; 
+        let isPlaybackPaused = false; // New state for Stop/Resume
+        
+        const reverb = new Tone.Reverb(0.6).toDestination();
+
+        const synthConfigurations = {
+            default: { oscillator: { type: "triangle8" }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.2, release: 0.5 }, volume: -6 },
+            pluckySynth: { oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.3, sustain: 0.01, release: 0.2 }, volume: -6 },
+            gentlePluck: { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.3 }, volume: -4 },
+            brightString: { oscillator: { type: "sawtooth6", detune: 2 }, envelope: { attack: 0.01, decay: 0.4, sustain: 0.05, release: 0.25 }, volume: -9 },
+            softPad: { oscillator: { type: "pwm", modulationFrequency: 0.3 }, envelope: { attack: 0.25, decay: 0.1, sustain: 0.7, release: 0.4 }, volume: -10 },
+            warmOrgan: { oscillator: {type: "fmsine", modulationIndex: 3, harmonicity: 3.4}, envelope: {attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.2}, volume: -8 },
+            electricPiano: { oscillator: {type: "fmsquare", modulationIndex: 2, harmonicity: 2.5}, envelope: {attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.1}, volume: -7},
+            synthLead: { oscillator: {type: "pulse", width: 0.3}, envelope: {attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.3}, volume: -8}
+        };
+        let activeSynthConfigKey = 'default';
+
+        const allChordProgressions = [
+            // Rock
+            { genre: "Rock", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["G3","B3","D4"]], chordsDisplay: ["G", "C", "D", "G"] },
+            { genre: "Rock", chordsTone: [["A3","C4","E4"], ["D3","F#3","A3"], ["E3","G#3","B3"], ["A3","C4","E4"]], chordsDisplay: ["Am", "D", "E", "Am"] },
+            { genre: "Rock", chordsTone: [["E3","G3","B3"], ["C3","E3","G3"], ["G3","B3","D4"], ["D3","F#3","A3"]], chordsDisplay: ["Em", "C", "G", "D"] },
+            { genre: "Rock", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["A3","C#4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["D", "G", "A", "D"] },
+            { genre: "Rock", chordsTone: [["C4","E4","G4"], ["G4","B4","D5"], ["A3","C4","E4"], ["F3","A3","C4"]], chordsDisplay: ["C", "G", "Am", "F"] },
+            { genre: "Rock", chordsTone: [["G3","B3","D4"], ["D3","F#3","A3"], ["C4","E4","G4"], ["G3","B3","D4"]], chordsDisplay: ["G", "D", "C", "G"] },
+            { genre: "Rock", chordsTone: [["A3","C#4","E4"], ["E3","G#3","B3"], ["D3","F#3","A3"], ["A3","C#4","E4"]], chordsDisplay: ["A", "E", "D", "A"] },
+            { genre: "Rock", chordsTone: [["E3","G#3","B3"], ["A3","C#4","E4"], ["B3","D#4","F#4"], ["E3","G#3","B3"]], chordsDisplay: ["E", "A", "B", "E"] },
+            { genre: "Rock", chordsTone: [["D3","F3","A3"], ["G2","A#2","D3"], ["C3","E3","G3"], ["D3","F3","A3"]], chordsDisplay: ["Dm", "Gm", "C", "Dm"] },
+            { genre: "Rock", chordsTone: [["G3","B3","D4"], ["E3","G3","B3"], ["A3","C4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["G", "Em", "Am", "D"] },
+            { genre: "Rock", chordsTone: [["C4","E4","G4"], ["F3","A3","C4"], ["D3","F3","A3"], ["G3","B3","D4"]], chordsDisplay: ["C", "F", "Dm", "G"] },
+            { genre: "Rock", chordsTone: [["A3","C4","E4"], ["E3","G3","B3"], ["F3","A3","C4"], ["C3","E3","G3"]], chordsDisplay: ["Am", "Em", "F", "C"] },
+            { genre: "Rock", chordsTone: [["D3","F#3","A3"], ["B2","D3","F#3"], ["E3","G3","B3"], ["A2","C#3","E3"]], chordsDisplay: ["D", "Bm", "Em", "A"] },
+            { genre: "Rock", chordsTone: [["E3","G#3","B3"], ["C3","E3","G3"], ["D3","F#3","A3"], ["B3","D#4","F#4"]], chordsDisplay: ["E", "C", "D", "B"] },
+            { genre: "Rock", chordsTone: [["F3","A3","C4"], ["C3","E3","G3"], ["G2","A#2","D3"], ["F3","A3","C4"]], chordsDisplay: ["F", "C", "Gm", "F"] },
+
+            // Classic Rock
+            { genre: "Classic Rock", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["G3","B3","D4"]], chordsDisplay: ["G", "C", "D", "G"] },
+            { genre: "Classic Rock", chordsTone: [["A3","C#4","E4"], ["D3","F#3","A3"], ["E3","G#3","B3"], ["A3","C#4","E4"]], chordsDisplay: ["A", "D", "E", "A"] },
+            { genre: "Classic Rock", chordsTone: [["E3","G#3","B3"], ["A3","C#4","E4"], ["E3","G#3","B3"], ["B3","D#4","F#4"]], chordsDisplay: ["E", "A", "E", "B"] },
+            { genre: "Classic Rock", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["A3","C#4","E4"], ["G3","B3","D4"]], chordsDisplay: ["D", "G", "A", "G"] },
+            { genre: "Classic Rock", chordsTone: [["C4","E4","G4"], ["G4","B4","D5"], ["A3","C4","E4"], ["F3","A3","C4"]], chordsDisplay: ["C", "G", "Am", "F"] },
+            { genre: "Classic Rock", chordsTone: [["G3","B3","D4"], ["E3","G3","B3"], ["C3","E3","G3"], ["D3","F#3","A3"]], chordsDisplay: ["G", "Em", "C", "D"] },
+            { genre: "Classic Rock", chordsTone: [["A3","C4","E4"], ["G3","B3","D4"], ["F3","A3","C4"], ["E3","G#3","B3"]], chordsDisplay: ["Am", "G", "F", "E"] },
+            { genre: "Classic Rock", chordsTone: [["E3","G#3","B3"], ["B3","D#4","F#4"], ["A3","C#4","E4"], ["E3","G#3","B3"]], chordsDisplay: ["E", "B", "A", "E"] },
+            { genre: "Classic Rock", chordsTone: [["D3","F#3","A3"], ["C3","E3","G3"], ["G3","B3","D4"], ["D3","F#3","A3"]], chordsDisplay: ["D", "C", "G", "D"] },
+            { genre: "Classic Rock", chordsTone: [["G3","B3","D4"], ["F3","A3","C4"], ["C3","E3","G3"], ["G3","B3","D4"]], chordsDisplay: ["G", "F", "C", "G"] },
+            { genre: "Classic Rock", chordsTone: [["A3","C#4","E4"], ["F3","A3","C4"], ["G3","B3","D4"], ["A3","C#4","E4"]], chordsDisplay: ["A", "F", "G", "A"] },
+            { genre: "Classic Rock", chordsTone: [["C4","E4","G4"], ["A3","C4","E4"], ["F3","A3","C4"], ["G3","B3","D4"]], chordsDisplay: ["C", "Am", "F", "G"] },
+            { genre: "Classic Rock", chordsTone: [["E3","G3","B3"], ["A3","C4","E4"], ["D3","F#3","A3"], ["G3","B3","D4"]], chordsDisplay: ["Em", "Am", "D", "G"] },
+            { genre: "Classic Rock", chordsTone: [["D3","F#3","A3"], ["A2","C#3","E3"], ["G2","B2","D3"], ["D3","F#3","A3"]], chordsDisplay: ["D", "A", "G", "D"] },
+            { genre: "Classic Rock", chordsTone: [["G3","B3","D4"], ["B2","D3","F#3"], ["C3","E3","G3"], ["D3","F#3","A3"]], chordsDisplay: ["G", "Bm", "C", "D"] },
+            
+            // Pop
+            { genre: "Pop", chordsTone: [["C4","E4","G4"], ["G4","B4","D5"], ["A3","C4","E4"], ["F3","A3","C4"]], chordsDisplay: ["C", "G", "Am", "F"] },
+            { genre: "Pop", chordsTone: [["G3","B3","D4"], ["D3","F#3","A3"], ["E3","G3","B3"], ["C3","E3","G3"]], chordsDisplay: ["G", "D", "Em", "C"] },
+            { genre: "Pop", chordsTone: [["F3","A3","C4"], ["C3","E3","G3"], ["G2","A#2","D3"], ["A2","C#3","E3"]], chordsDisplay: ["F", "C", "Gm", "Am"] }, // A needs C#
+            { genre: "Pop", chordsTone: [["A3","C4","E4"], ["F3","A3","C4"], ["C3","E3","G3"], ["G3","B3","D4"]], chordsDisplay: ["Am", "F", "C", "G"] },
+            { genre: "Pop", chordsTone: [["D3","F#3","A3"], ["A2","C#3","E3"], ["B2","D3","F#3"], ["G2","B2","D3"]], chordsDisplay: ["D", "A", "Bm", "G"] },
+            { genre: "Pop", chordsTone: [["C4","E4","G4"], ["E3","G3","B3"], ["A3","C4","E4"], ["F3","A3","C4"]], chordsDisplay: ["C", "Em", "Am", "F"] },
+            { genre: "Pop", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["E3","G3","B3"], ["D3","F#3","A3"]], chordsDisplay: ["G", "C", "Em", "D"] },
+            { genre: "Pop", chordsTone: [["A3","C#4","E4"], ["D3","F#3","A3"], ["E3","G#3","B3"], ["D3","F#3","A3"]], chordsDisplay: ["A", "D", "E", "D"] },
+            { genre: "Pop", chordsTone: [["E3","G#3","B3"], ["A3","C#4","E4"], ["C3","E3","G3"], ["G3","B3","D4"]], chordsDisplay: ["E", "A", "C", "G"] }, // C needs E natural for E major context
+            { genre: "Pop", chordsTone: [["D3","F3","A3"], ["A2","C3","E3"], ["C3","E3","G3"], ["G2","A#2","D3"]], chordsDisplay: ["Dm", "Am", "C", "Gm"] },
+            { genre: "Pop", chordsTone: [["F3","A3","C4"], ["G3","B3","D4"], ["A3","C4","E4"], ["D3","F3","A3"]], chordsDisplay: ["F", "G", "Am", "Dm"] },
+            { genre: "Pop", chordsTone: [["C4","E4","G4"], ["A3","C4","E4"], ["D3","F#3","A3"], ["G3","B3","D4"]], chordsDisplay: ["C", "Am", "D", "G"] },
+            { genre: "Pop", chordsTone: [["G3","B3","D4"], ["B2","D3","F#3"], ["E3","G3","B3"], ["A2","C#3","E3"]], chordsDisplay: ["G", "Bm", "Em", "A"] },
+            { genre: "Pop", chordsTone: [["A3","C#4","E4"], ["E3","G#3","B3"], ["F3","A3","C4"], ["D3","F#3","A3"]], chordsDisplay: ["A", "E", "F", "D"] }, // F needs F# for A major context
+            { genre: "Pop", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["D3","F#3","A3"], ["A2","C#3","E3"]], chordsDisplay: ["D", "G", "D", "A"] },
+
+            // Folk
+            { genre: "Folk", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["G3","B3","D4"]], chordsDisplay: ["G", "C", "D", "G"] },
+            { genre: "Folk", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["A3","C#4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["D", "G", "A", "D"] },
+            { genre: "Folk", chordsTone: [["C4","E4","G4"], ["F3","A3","C4"], ["G3","B3","D4"], ["C4","E4","G4"]], chordsDisplay: ["C", "F", "G", "C"] },
+            { genre: "Folk", chordsTone: [["A3","C4","E4"], ["D3","F3","A3"], ["E3","G#3","B3"], ["A3","C4","E4"]], chordsDisplay: ["Am", "Dm", "E", "Am"] },
+            { genre: "Folk", chordsTone: [["G3","B3","D4"], ["E3","G3","B3"], ["C4","E4","G4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "Em", "C", "D"] },
+            { genre: "Folk", chordsTone: [["E3","G3","B3"], ["A3","C4","E4"], ["D3","F#3","A3"], ["G3","B3","D4"]], chordsDisplay: ["Em", "Am", "D", "G"] },
+            { genre: "Folk", chordsTone: [["C4","E4","G4"], ["G4","B4","D5"], ["A3","C4","E4"], ["G3","B3","D4"]], chordsDisplay: ["C", "G", "Am", "G"] },
+            { genre: "Folk", chordsTone: [["D3","F#3","A3"], ["A2","C#3","E3"], ["G2","B2","D3"], ["D3","F#3","A3"]], chordsDisplay: ["D", "A", "G", "D"] },
+            { genre: "Folk", chordsTone: [["A3","C#4","E4"], ["E3","G#3","B3"], ["D3","F#3","A3"], ["A3","C#4","E4"]], chordsDisplay: ["A", "E", "D", "A"] },
+            { genre: "Folk", chordsTone: [["E3","G#3","B3"], ["B3","D#4","F#4"], ["A3","C#4","E4"], ["E3","G#3","B3"]], chordsDisplay: ["E", "B", "A", "E"] },
+            { genre: "Folk", chordsTone: [["G3","B3","D4"], ["D3","F#3","A3"], ["A3","C4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["G", "D", "Am", "D"] },
+            { genre: "Folk", chordsTone: [["C4","E4","G4"], ["F3","A3","C4"], ["C4","E4","G4"], ["G3","B3","D4"]], chordsDisplay: ["C", "F", "C", "G"] },
+            { genre: "Folk", chordsTone: [["A3","C4","E4"], ["G3","B3","D4"], ["C4","E4","G4"], ["E3","G#3","B3"]], chordsDisplay: ["Am", "G", "C", "E"] },
+            { genre: "Folk", chordsTone: [["D3","F3","A3"], ["G2","A#2","D3"], ["A2","C3","E3"], ["D3","F3","A3"]], chordsDisplay: ["Dm", "Gm", "Am", "Dm"] },
+            { genre: "Folk", chordsTone: [["E3","G3","B3"], ["C3","E3","G3"], ["G3","B3","D4"], ["B3","D#4","F#4"]], chordsDisplay: ["Em", "C", "G", "B"] },
+
+            // Blues (Simplified to Major/Minor)
+            { genre: "Blues", chordsTone: [["A3","C#4","E4"], ["D3","F#3","A3"], ["A3","C#4","E4"], ["E3","G#3","B3"]], chordsDisplay: ["A", "D", "A", "E"] },
+            { genre: "Blues", chordsTone: [["E3","G#3","B3"], ["A3","C#4","E4"], ["E3","G#3","B3"], ["B3","D#4","F#4"]], chordsDisplay: ["E", "A", "E", "B"] },
+            { genre: "Blues", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["G3","B3","D4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "C", "G", "D"] },
+            { genre: "Blues", chordsTone: [["C4","E4","G4"], ["F3","A3","C4"], ["C4","E4","G4"], ["G3","B3","D4"]], chordsDisplay: ["C", "F", "C", "G"] },
+            { genre: "Blues", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["D3","F#3","A3"], ["A2","C#3","E3"]], chordsDisplay: ["D", "G", "D", "A"] },
+            { genre: "Blues", chordsTone: [["A3","C4","E4"], ["D3","F3","A3"], ["A3","C4","E4"], ["E3","G#3","B3"]], chordsDisplay: ["Am", "Dm", "Am", "E"] }, // Minor Blues
+            { genre: "Blues", chordsTone: [["E3","G3","B3"], ["A3","C4","E4"], ["E3","G3","B3"], ["B3","D#4","F#4"]], chordsDisplay: ["Em", "Am", "Em", "B"] }, // Minor Blues
+            { genre: "Blues", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["C4","E4","G4"]], chordsDisplay: ["G", "C", "D", "C"] }, // Turnaround
+            { genre: "Blues", chordsTone: [["A3","C#4","E4"], ["A3","C#4","E4"], ["D3","F#3","A3"], ["E3","G#3","B3"]], chordsDisplay: ["A", "A", "D", "E"] },
+            { genre: "Blues", chordsTone: [["E3","G#3","B3"], ["E3","G#3","B3"], ["A3","C#4","E4"], ["B3","D#4","F#4"]], chordsDisplay: ["E", "E", "A", "B"] },
+            { genre: "Blues", chordsTone: [["D3","F3","A3"], ["G2","A#2","D3"], ["D3","F3","A3"], ["A2","C3","E3"]], chordsDisplay: ["Dm", "Gm", "Dm", "Am"] }, // Minor Blues
+            { genre: "Blues", chordsTone: [["C4","E4","G4"], ["G3","B3","D4"], ["F3","A3","C4"], ["C4","E4","G4"]], chordsDisplay: ["C", "G", "F", "C"] }, // Quick Change
+            { genre: "Blues", chordsTone: [["G3","B3","D4"], ["D3","F#3","A3"], ["C4","E4","G4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "D", "C", "D"] },
+            { genre: "Blues", chordsTone: [["A3","C#4","E4"], ["E3","G#3","B3"], ["D3","F#3","A3"], ["E3","G#3","B3"]], chordsDisplay: ["A", "E", "D", "E"] },
+            { genre: "Blues", chordsTone: [["B3","D#4","F#4"], ["E3","G#3","B3"], ["B3","D#4","F#4"], ["A3","C#4","E4"]], chordsDisplay: ["B", "E", "B", "A"] }, // Using B as tonic
+
+            // Bluegrass (already have 15)
+            { genre: "Bluegrass", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["G3","B3","D4"]], chordsDisplay: ["G", "C", "D", "G"] },
+            { genre: "Bluegrass", chordsTone: [["C3","E3","G3"], ["F3","A3","C4"], ["G3","B3","D4"], ["C3","E3","G3"]], chordsDisplay: ["C", "F", "G", "C"] },
+            { genre: "Bluegrass", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["A3","C#4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["D", "G", "A", "D"] },
+            { genre: "Bluegrass", chordsTone: [["A3","C#4","E4"], ["D3","F#3","A3"], ["E3","G#3","B3"], ["A3","C#4","E4"]], chordsDisplay: ["A", "D", "E", "A"] },
+            { genre: "Bluegrass", chordsTone: [["G3","B3","D4"], ["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "G", "C", "D"] },
+            { genre: "Bluegrass", chordsTone: [["C3","E3","G3"], ["C3","E3","G3"], ["F3","A3","C4"], ["G3","B3","D4"]], chordsDisplay: ["C", "C", "F", "G"] },
+            { genre: "Bluegrass", chordsTone: [["D3","F#3","A3"], ["D3","F#3","A3"], ["G3","B3","D4"], ["A3","C#4","E4"]], chordsDisplay: ["D", "D", "G", "A"] },
+            { genre: "Bluegrass", chordsTone: [["G3","B3","D4"], ["D4","F#4","A4"], ["G3","B3","D4"], ["C4","E4","G4"]], chordsDisplay: ["G", "D", "G", "C"] },
+            { genre: "Bluegrass", chordsTone: [["A3","C#4","E4"], ["E3","G#3","B3"], ["A3","C#4","E4"], ["D3","F#3","A3"]], chordsDisplay: ["A", "E", "A", "D"] },
+            { genre: "Bluegrass", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["G3","B3","D4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "C", "G", "D"] },
+            { genre: "Bluegrass", chordsTone: [["C3","E3","G3"], ["G3","B3","D4"], ["C3","E3","G3"], ["F3","A3","C4"]], chordsDisplay: ["C", "G", "C", "F"] },
+            { genre: "Bluegrass", chordsTone: [["E3","G3","B3"], ["A3","C4","E4"], ["D3","F#3","A3"], ["G3","B3","D4"]], chordsDisplay: ["Em", "Am", "D", "G"] },
+            { genre: "Bluegrass", chordsTone: [["A3","C4","E4"], ["D3","F#3","A3"], ["G3","B3","D4"], ["C3","E3","G3"]], chordsDisplay: ["Am", "D", "G", "C"] },
+            { genre: "Bluegrass", chordsTone: [["G3","B3","D4"], ["E3","G3","B3"], ["C4","E4","G4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "Em", "C", "D"] },
+            { genre: "Bluegrass", chordsTone: [["D3","F#3","A3"], ["B2","D3","F#3"], ["G2","B2","D3"], ["A2","C#3","E3"]], chordsDisplay: ["D", "Bm", "G", "A"] },
+
+            // Jamgrass (already have 15)
+            { genre: "Jamgrass", chordsTone: [["A3","C4","E4"], ["G3","B3","D4"], ["D3","F#3","A3"], ["A3","C4","E4"]], chordsDisplay: ["Am", "G", "D", "Am"] },
+            { genre: "Jamgrass", chordsTone: [["E3","G3","B3"], ["D3","F#3","A3"], ["A3","C#4","E4"], ["E3","G3","B3"]], chordsDisplay: ["Em", "D", "A", "Em"] },
+            { genre: "Jamgrass", chordsTone: [["G3","B3","D4"], ["F3","A3","C4"], ["C3","E3","G3"], ["G3","B3","D4"]], chordsDisplay: ["G", "F", "C", "G"] },
+            { genre: "Jamgrass", chordsTone: [["D3","F3","A3"], ["C3","E3","G3"], ["G3","B3","D4"], ["D3","F3","A3"]], chordsDisplay: ["Dm", "C", "G", "Dm"] },
+            { genre: "Jamgrass", chordsTone: [["A3","C4","E4"], ["D3","F3","A3"], ["G3","B3","D4"], ["A3","C4","E4"]], chordsDisplay: ["Am", "Dm", "G", "Am"] },
+            { genre: "Jamgrass", chordsTone: [["E3","G3","B3"], ["A3","C4","E4"], ["D3","F#3","A3"], ["B3","D#4","F#4"]], chordsDisplay: ["Em", "Am", "D", "B"] },
+            { genre: "Jamgrass", chordsTone: [["G3","B3","D4"], ["C4","E4","G4"], ["D4","F#4","A4"], ["E3","G3","B3"]], chordsDisplay: ["G", "C", "D", "Em"] },
+            { genre: "Jamgrass", chordsTone: [["C3","E3","G3"], ["G3","B3","D4"], ["A3","C4","E4"], ["F3","A3","C4"]], chordsDisplay: ["C", "G", "Am", "F"] },
+            { genre: "Jamgrass", chordsTone: [["D3","F#3","A3"], ["A2","C#3","E3"], ["G2","B2","D3"], ["E3","G3","B3"]], chordsDisplay: ["D", "A", "G", "Em"] },
+            { genre: "Jamgrass", chordsTone: [["A3","C4","E4"], ["F3","A3","C4"], ["C3","E3","G3"], ["G3","B3","D4"]], chordsDisplay: ["Am", "F", "C", "G"] },
+            { genre: "Jamgrass", chordsTone: [["E3","G3","B3"], ["C3","E3","G3"], ["D3","F#3","A3"], ["A3","C4","E4"]], chordsDisplay: ["Em", "C", "D", "Am"] },
+            { genre: "Jamgrass", chordsTone: [["G3","B3","D4"], ["D3","F3","A3"], ["C4","E4","G4"], ["D4","F#4","A4"]], chordsDisplay: ["G", "Dm", "C", "D"] },
+            { genre: "Jamgrass", chordsTone: [["C3","E3","G3"], ["F3","A3","C4"], ["A3","C4","E4"], ["G3","B3","D4"]], chordsDisplay: ["C", "F", "Am", "G"] },
+            { genre: "Jamgrass", chordsTone: [["D3","F#3","A3"], ["G3","B3","D4"], ["E3","G3","B3"], ["A2","C#3","E3"]], chordsDisplay: ["D", "G", "Em", "A"] },
+            { genre: "Jamgrass", chordsTone: [["A3","C4","E4"], ["G3","B3","D4"], ["C3","E3","G3"], ["D3","F#3","A3"]], chordsDisplay: ["Am", "G", "C", "D"] }
+        ].filter(p => p.chordsDisplay.length === 4); 
+
+        
+        function createOrUpdateSynth(configKey = 'default') {
+            if (synth && !synth.disposed) {
+                synth.releaseAll(0);
+                try { 
+                    if (synth.numberOfOutputs > 0 && reverb && !reverb.disposed) {
+                        synth.disconnect(reverb); 
+                    }
+                } catch(e) { /* ignore */ }
+                synth.dispose();
+            }
+            activeSynthConfigKey = configKey;
+            const config = synthConfigurations[configKey] || synthConfigurations.default;
+            synth = new Tone.PolySynth(Tone.Synth, config);
+            if (reverb && !reverb.disposed) {
+                 synth.connect(reverb);
+            } else { 
+                synth.toDestination();
+            }
+        }
+
+        function stopAllAudioPlayback(forNewProgression = false) {
+            Tone.Transport.stop(0); 
+            Tone.Transport.position = 0; 
+            Tone.Transport.cancel(0); 
+
+            if (toneSequence && !toneSequence.disposed) { 
+                toneSequence.stop(0); 
+                toneSequence.clear(); 
+                toneSequence.dispose(); 
+            }
+            toneSequence = null; 
+            
+            if(synth && !synth.disposed) { 
+                synth.releaseAll(0); 
+            }
+            removeChordHighlight();
+            instrumentSelector.disabled = false; 
+            genreSelector.disabled = false;
+
+            if (forNewProgression || !currentProgression) { // If starting a new one or no current one
+                stopResumeButtonText.textContent = "Stop";
+                stopResumeIcon.className = "fas fa-stop";
+                stopResumeButton.disabled = true;
+                isPlaybackPaused = false;
+            } else { // If stopping a current one, set to Resume
+                stopResumeButtonText.textContent = "Resume";
+                stopResumeIcon.className = "fas fa-play";
+                stopResumeButton.disabled = false; // Enable resume
+                isPlaybackPaused = true;
+            }
+        }
+
+        function updateBPM(newBpm) {
+            const oldBpm = currentBPM;
+            currentBPM = parseInt(newBpm);
+            bpmValueDisplay.textContent = currentBPM;
+            Tone.Transport.bpm.value = currentBPM; 
+
+            if (currentProgression && Tone.Transport.state === "started" && oldBpm !== currentBPM) {
+                const wasRevealed = revealButton.disabled; 
+                
+                stopAllAudioPlayback(); // This will set stopResumeButton to "Resume"
+                
+                if (wasRevealed) {
+                    revealActualChords(currentProgression); 
+                } else {
+                    displayPlaceholderChordBoxes(currentProgression); 
+                }
+                playProgressionLogic(currentProgression, synth, wasRevealed); 
+                stopResumeButtonText.textContent = "Stop"; 
+                stopResumeIcon.className = "fas fa-stop";
+                isPlaybackPaused = false;
+            }
+        }
+        
+        bpmSlider.value = currentBPM; 
+        bpmValueDisplay.textContent = currentBPM;
+        Tone.Transport.bpm.value = currentBPM; 
+
+        async function initializeAudioContext() {
+            if (!audioInitialized) {
+                try {
+                    await Tone.start();
+                    audioInitialized = true;
+                    createOrUpdateSynth(activeSynthConfigKey); 
+                } catch (error) {
+                    console.error("Could not initialize audio. Please check browser permissions.", error);
+                }
+            } else if (!synth || synth.disposed) { 
+                 createOrUpdateSynth(activeSynthConfigKey); 
+            }
+        }
+
+        function getRandomProgression() {
+            const selectedGenre = genreSelector.value;
+            let progressionsToUse = allChordProgressions;
+
+            if (selectedGenre !== "All") {
+                progressionsToUse = allChordProgressions.filter(p => p.genre === selectedGenre);
+            }
+
+            if (progressionsToUse.length === 0) {
+                console.warn(`No 4-chord progressions found for "${selectedGenre}". Using "All".`);
+                progressionsToUse = allChordProgressions; 
+                 if (progressionsToUse.length === 0) { 
+                    console.error("No 4-chord progressions available at all.");
+                    return null;
+                 }
+            }
+            const randomIndex = Math.floor(Math.random() * progressionsToUse.length);
+            return progressionsToUse[randomIndex];
+        }
+
+
+        function styleChordBox(element, isHighlighted, usePlaceholderStyle) {
+            element.className = ''; // Clear existing classes first
+            // Removed "transition-all duration-150 ease-in-out" from baseClasses
+            const baseClasses = "border rounded-lg font-semibold shadow text-center " +
+                                "flex-grow basis-0 aspect-square flex items-center justify-center p-2 text-4xl " + 
+                                "sm:flex-none sm:aspect-auto sm:p-2 sm:text-4xl sm:min-w-[4.5rem] " +           
+                                "md:flex-none md:aspect-auto md:px-2 md:py-2 md:text-4xl md:min-w-[5.5rem] " +    
+                                "lg:flex-none lg:aspect-auto lg:px-4 lg:py-4 lg:text-4xl lg:min-w-[7rem]";       
+            
+            let specificClasses = "";
+
+            if (usePlaceholderStyle) {
+                if (isHighlighted) { // Active Placeholder (shows note, styled for activity)
+                    // Removed static scale from here, animation will handle it.
+                    specificClasses = "bg-green-200 text-green-700 border-green-400 shadow-lg"; 
+                    element.innerHTML = "&#9835;"; // Set musical note
+                } else { // Inactive Placeholder (blank)
+                    specificClasses = "bg-green-50 border-green-200 text-transparent"; 
+                    element.innerHTML = ""; // Ensure it's blank
+                }
+            } else { // Revealed Chords
+                if (isHighlighted) { // Active Revealed Chord
+                    // Removed static scale (like scale-110) and ring from here, animation will handle pulse.
+                    // Ring can be re-added if desired, but ensure it doesn't cause layout shifts that affect animation.
+                    specificClasses = "bg-teal-500 text-white border-teal-600 shadow-xl"; 
+                    // Chord name text is set by revealActualChords
+                } else { // Inactive Revealed Chord
+                    specificClasses = "bg-green-100 text-green-800 border-green-300";
+                    // Chord name text is set by revealActualChords
+                }
+            }
+            element.className = `${baseClasses} ${specificClasses}`;
+            // The beat-pulse-animation is handled by highlightCurrentChord
+        }
+
+        function highlightCurrentChord(originalChordIndex, isRevealed) { // isRevealed: are chords globally revealed?
+            const chordBoxes = chordProgressionOutput.children;
+            for (let i = 0; i < chordBoxes.length; i++) {
+                const isCurrentBoxActive = (i === originalChordIndex);
+                // Third arg (usePlaceholderStyle) is true if chords are NOT globally revealed
+                styleChordBox(chordBoxes[i], isCurrentBoxActive, !isRevealed); 
+
+                // Animation handling
+                if (isCurrentBoxActive) {
+                    chordBoxes[i].classList.remove('beat-pulse-animation'); 
+                    void chordBoxes[i].offsetWidth; // Trigger reflow to restart animation
+                    chordBoxes[i].classList.add('beat-pulse-animation');
+                } else {
+                    chordBoxes[i].classList.remove('beat-pulse-animation');
+                }
+            }
+        }
+        
+        function removeChordHighlight() {
+            const chordBoxes = chordProgressionOutput.children;
+            const showPlaceholders = !revealButton.disabled; // True if reveal button is NOT disabled (chords are hidden)
+            for (let i = 0; i < chordBoxes.length; i++) {
+                 // All boxes are not highlighted. Style depends on whether we are showing placeholders or revealed chords.
+                 styleChordBox(chordBoxes[i], false, showPlaceholders);
+                 chordBoxes[i].classList.remove('beat-pulse-animation');
+            }
+        }
+
+        function displayPlaceholderChordBoxes(progression) {
+            chordProgressionOutput.innerHTML = ''; 
+            progression.chordsDisplay.forEach(() => { 
+                const chordSpan = document.createElement('span');
+                // Initially, all placeholders are inactive.
+                // isHighlighted = false, usePlaceholderStyle = true
+                styleChordBox(chordSpan, false, true); 
+                // innerHTML for placeholders is now handled by styleChordBox
+                chordProgressionOutput.appendChild(chordSpan);
+            });
+            chordProgressionOutput.classList.remove('hidden'); 
+        }
+        
+        function playProgressionLogic(progression, activeSynthInstance, startRevealed = false) {
+            if (!progression) {
+                console.error("No progression selected.");
+                instrumentSelector.disabled = false; 
+                genreSelector.disabled = false;
+                return;
+            }
+             if (!activeSynthInstance || activeSynthInstance.disposed) { 
+                console.error("Error: Audio synth not ready for playback.");
+                instrumentSelector.disabled = false; 
+                genreSelector.disabled = false;
+                return; 
+            }
+
+            const expandedEvents = [];
+            progression.chordsTone.forEach((chordNotes, originalChordIndex) => {
+                for (let i = 0; i < HITS_PER_CHORD; i++) {
+                    expandedEvents.push({
+                        notes: chordNotes,
+                        originalIdx: originalChordIndex 
+                    });
+                }
+            });
+            
+            if (toneSequence && !toneSequence.disposed) { 
+                toneSequence.stop(0);
+                toneSequence.clear();
+                toneSequence.dispose();
+            }
+            toneSequence = null; 
+
+            toneSequence = new Tone.Sequence((time, event) => {
+                if(activeSynthInstance && !activeSynthInstance.disposed) {
+                    activeSynthInstance.triggerAttackRelease(event.notes, DURATION_PER_HIT, time);
+                }
+                Tone.Draw.schedule(() => {
+                    const isRevealedCurrently = revealButton.disabled; 
+                    highlightCurrentChord(event.originalIdx, isRevealedCurrently);
+                }, time); 
+            }, expandedEvents, DURATION_PER_HIT);  
+
+            toneSequence.loop = true;
+            
+            Tone.Transport.bpm.value = currentBPM; 
+            if (Tone.Transport.state !== "started") {
+                Tone.Transport.start("+0.1"); 
+            }
+            toneSequence.start(0); 
+
+            
+            instrumentSelector.disabled = true; 
+            genreSelector.disabled = true; 
+            
+            if (!startRevealed) {
+                revealButton.disabled = false;
+            }
+            stopResumeButton.disabled = false;
+            stopResumeButtonText.textContent = "Stop";
+            stopResumeIcon.className = "fas fa-stop";
+            isPlaybackPaused = false;
+            playNextButtonText.textContent = "Next Progression";
+            playNextButton.querySelector('i').className = 'fas fa-step-forward';
+        }
+
+
+        function revealActualChords(progression) {
+            if (!progression) return;
+            const chordBoxes = chordProgressionOutput.children;
+            if (chordBoxes.length !== progression.chordsDisplay.length) {
+                displayPlaceholderChordBoxes(progression); 
+            }
+
+            progression.chordsDisplay.forEach((chordName, index) => {
+                if (chordBoxes[index]) {
+                    chordBoxes[index].textContent = chordName;
+                    let isCurrentlyHighlighted = false;
+                    if (toneSequence && !toneSequence.disposed && Tone.Transport.state === "started" && toneSequence.progress !== undefined && toneSequence.events && toneSequence.events.length > 0) {
+                        const currentEventInternalIndex = Math.floor(toneSequence.progress * toneSequence.events.length);
+                         if (toneSequence.events[currentEventInternalIndex]) { 
+                            const currentOriginalChordIndex = toneSequence.events[currentEventInternalIndex].originalIdx;
+                            if (currentOriginalChordIndex === index) {
+                                isCurrentlyHighlighted = true;
+                            }
+                        }
+                    }
+                    styleChordBox(chordBoxes[index], isCurrentlyHighlighted, false); 
+                }
+            });
+            
+        }
+
+        async function handlePlayNextClick() {
+            await initializeAudioContext(); 
+            if (!audioInitialized || !synth || synth.disposed) {
+                console.error("Audio not ready. Please try again or select an instrument.");
+                return; 
+            }
+
+            stopAllAudioPlayback(true); // Pass true to indicate it's for a new progression
+            currentProgression = getRandomProgression();
+            if (currentProgression) {
+                displayPlaceholderChordBoxes(currentProgression); 
+                playProgressionLogic(currentProgression, synth); 
+            } else {
+                 instrumentSelector.disabled = false; 
+                 genreSelector.disabled = false;
+            }
+        }
+        
+        function handleStopResumeClick() {
+            if (!currentProgression) return; // Nothing to stop/resume
+
+            if (Tone.Transport.state === "started") { // If playing, stop it
+                stopAllAudioPlayback(false); // Pass false, not for new progression
+                
+            } else if (isPlaybackPaused) { // If paused, resume it
+                const wasRevealed = revealButton.disabled;
+                if (wasRevealed) {
+                    revealActualChords(currentProgression);
+                } else {
+                    displayPlaceholderChordBoxes(currentProgression);
+                }
+                playProgressionLogic(currentProgression, synth, wasRevealed);
+            }
+        }
+
+        function handleRevealClick() {
+            if (currentProgression) {
+                revealActualChords(currentProgression);
+                revealButton.disabled = true; 
+            }
+        }
+
+        bpmSlider.addEventListener('input', (event) => {
+            updateBPM(event.target.value); 
+        });
+        
+        instrumentSelector.addEventListener('change', async (event) => {
+            await initializeAudioContext(); 
+             if (!audioInitialized) {
+                console.error("Audio not initialized. Cannot change instrument yet.");
+                return;
+             }
+            const selectedSoundKey = event.target.value;
+            // Stop playback before changing synth, if any
+            if (Tone.Transport.state === "started") {
+                stopAllAudioPlayback(true); // Stop as if for new progression to reset Stop/Resume button
+            }
+            createOrUpdateSynth(selectedSoundKey); 
+            
+            if (currentProgression) { // If a progression was loaded, update its visual
+                if (revealButton.disabled) { 
+                    revealActualChords(currentProgression);
+                } else { 
+                    displayPlaceholderChordBoxes(currentProgression);
+                }
+            }
+             isPlaybackPaused = false; // Changing instrument resets paused state
+             stopResumeButtonText.textContent = "Stop";
+             stopResumeIcon.className = "fas fa-stop";
+             stopResumeButton.disabled = true;
+        });
+
+        genreSelector.addEventListener('change', () => {
+            if (Tone.Transport.state === "started") {
+                stopAllAudioPlayback(true); 
+            }
+            if (currentProgression) {
+                chordProgressionOutput.innerHTML = '';
+                currentProgression = null; 
+                revealButton.disabled = true;
+                stopResumeButtonText.textContent = "Stop";
+                stopResumeIcon.className = "fas fa-stop";
+                stopResumeButton.disabled = true;
+                isPlaybackPaused = false;
+            }
+            playNextButtonText.textContent = "Start / Next"; // Reset play button text
+            playNextButton.querySelector('i').className = 'fas fa-play'; // Reset play button icon
+            
+        });
+
+
+        playNextButton.addEventListener('click', handlePlayNextClick);
+        stopResumeButton.addEventListener('click', handleStopResumeClick); 
+        revealButton.addEventListener('click', handleRevealClick);
+
+        chordProgressionOutput.classList.remove('hidden');
+        
+        instrumentSelector.disabled = false; 
+        genreSelector.disabled = false;
+        
+        (async () => {
+            await initializeAudioContext();
+        })();
+
+    </script>
+</body>
+</html>
