@@ -214,6 +214,113 @@
         </footer>
     </div>
 
+    <!-- Help/Instructions Section -->
+    <div class="help-section bg-white shadow-lg rounded-xl p-6 mt-6 w-full max-w-4xl">
+        <h2 class="text-2xl font-bold text-teal-700 mb-4 text-center">
+            <i class="fas fa-question-circle mr-2"></i>How to Use the Ear Trainer
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="instructions-column">
+                <h3 class="text-lg font-semibold text-[#3d5584] mb-3">
+                    <i class="fas fa-play-circle mr-2"></i>Getting Started
+                </h3>
+                <ul class="space-y-2 text-[#202c45] text-sm">
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Click <strong>"Start / Next"</strong> to begin with a random chord progression
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Listen to the 4-chord progression and try to identify the chords
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Click <strong>"Reveal Chords"</strong> to see the actual chord names
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Use <strong>"Stop"</strong> to pause and <strong>"Resume"</strong> to continue
+                    </li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold text-[#3d5584] mb-3 mt-5">
+                    <i class="fas fa-lock mr-2"></i>Chord Locking
+                </h3>
+                <ul class="space-y-2 text-[#202c45] text-sm">
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Click any <i class="fas fa-unlock text-amber-500"></i> button above a chord to lock it
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Locked chords <i class="fas fa-lock text-amber-500"></i> will repeat continuously
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Only one chord can be locked at a time
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Click the locked chord again to unlock it
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="controls-column">
+                <h3 class="text-lg font-semibold text-[#3d5584] mb-3">
+                    <i class="fas fa-sliders-h mr-2"></i>Customization
+                </h3>
+                <ul class="space-y-2 text-[#202c45] text-sm">
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        <strong>Tempo:</strong> Adjust BPM from 60-180 using the slider
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        <strong>Instrument:</strong> Choose from 6 different synth sounds
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        <strong>Genre:</strong> Filter progressions by musical style
+                    </li>
+                </ul>
+                
+                <h3 class="text-lg font-semibold text-[#3d5584] mb-3 mt-5">
+                    <i class="fas fa-lightbulb mr-2"></i>Training Tips
+                </h3>
+                <ul class="space-y-2 text-[#202c45] text-sm">
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Start with slower tempos (60-90 BPM) when learning
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Focus on one genre at a time to learn common patterns
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Use chord locking to isolate and study difficult chords
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-chevron-right text-teal-600 mr-2 mt-1 flex-shrink-0"></i>
+                        Practice identifying chord functions (I, IV, V, vi, etc.)
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="contact-section mt-6 pt-4 border-t border-gray-200 text-center">
+            <p class="text-[#6b7280] text-sm">
+                <i class="fas fa-envelope mr-2"></i>
+                Comments or suggestions? Send them to 
+                <a href="mailto:toddbinder@gmail.com" class="text-teal-600 hover:text-teal-700 font-medium">
+                    toddbinder@gmail.com
+                </a>
+            </p>
+        </div>
+    </div>
+
     <script>
         const playNextButton = document.getElementById('playNextButton');
         const playNextButtonText = document.getElementById('playNextButtonText');
