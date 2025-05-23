@@ -887,69 +887,128 @@
             }
         }
 
-        bpmSlider.addEventListener('input', (event) => {
-            updateBPM(event.target.value); 
-        });
-        
-        instrumentSelector.addEventListener('change', async (event) => {
-            await initializeAudioContext(); 
-             if (!audioInitialized) {
-                console.error("Audio not initialized. Cannot change instrument yet.");
-                return;
-             }
-            const selectedSoundKey = event.target.value;
-            // Stop playback before changing synth, if any
-            if (Tone.Transport.state === "started") {
-                stopAllAudioPlayback(true); // Stop as if for new progression to reset Stop/Resume button
-            }
-            createOrUpdateSynth(selectedSoundKey); 
-            
-            if (currentProgression) { // If a progression was loaded, update its visual
-                if (revealButton.disabled) { 
-                    revealActualChords(currentProgression);
-                } else { 
-                    displayPlaceholderChordBoxes(currentProgression);
-                }
-            }
-             isPlaybackPaused = false; // Changing instrument resets paused state
-             stopResumeButtonText.textContent = "Stop";
-             stopResumeIcon.className = "fas fa-stop";
-             stopResumeButton.disabled = true;
-        });
+        // localStorage utility functions
+function setPreference(name, value) {
+    try {
+        localStorage.setItem(name, value);
+    } catch (e) {
+        console.warn('Could not save preference:', e);
+    }
+}
 
-        genreSelector.addEventListener('change', () => {
-            if (Tone.Transport.state === "started") {
-                stopAllAudioPlayback(true); 
-            }
-            if (currentProgression) {
-                chordProgressionOutput.innerHTML = '';
-                lockContainer.classList.add('hidden');
-                currentProgression = null; 
-                revealButton.disabled = true;
-                stopResumeButtonText.textContent = "Stop";
-                stopResumeIcon.className = "fas fa-stop";
-                stopResumeButton.disabled = true;
-                isPlaybackPaused = false;
-            }
-            playNextButtonText.textContent = "Start / Next"; // Reset play button text
-            playNextButton.querySelector('i').className = 'fas fa-play'; // Reset play button icon
-            
-        });
+function getPreference(name) {
+    try {
+        return localStorage.getItem(name);
+    } catch (e) {
+        console.warn('Could not load preference:', e);
+        return null;
+    }
+}
 
+// Update the save functions
+function saveBPMPreference(bpm) {
+    setPreference('earTrainerBPM', bpm);
+}
 
-        playNextButton.addEventListener('click', handlePlayNextClick);
-        stopResumeButton.addEventListener('click', handleStopResumeClick); 
-        revealButton.addEventListener('click', handleRevealClick);
+function saveInstrumentPreference(instrument) {
+    setPreference('earTrainerInstrument', instrument);
+}
 
-        chordProgressionOutput.classList.remove('hidden');
-        
-        instrumentSelector.disabled = false; 
-        genreSelector.disabled = false;
-        
-        (async () => {
-            await initializeAudioContext();
-        })();
+function saveGenrePreference(genre) {
+    setPreference('earTrainerGenre', genre);
+}
 
+// Update loadPreferences function
+function loadPreferences() {
+    // Load BPM preference
+    const savedBPM = getPreference('earTrainerBPM');
+    if (savedBPM && savedBPM >= 60 && savedBPM <= 180) {
+        currentBPM = parseInt(savedBPM);
+        bpmSlider.value = currentBPM;
+        bpmValueDisplay.textContent = currentBPM;
+        Tone.Transport.bpm.value = currentBPM;
+    }
+
+    // Load instrument preference
+    const savedInstrument = getPreference('earTrainerInstrument');
+    if (savedInstrument && synthConfigurations[savedInstrument]) {
+        instrumentSelector.value = savedInstrument;
+        activeSynthConfigKey = savedInstrument;
+    }
+
+    // Load genre preference
+    const savedGenre = getPreference('earTrainerGenre');
+    if (savedGenre) {
+        const genreOptions = Array.from(genreSelector.options).map(option => option.value);
+        if (genreOptions.includes(savedGenre)) {
+            genreSelector.value = savedGenre;
+        }
+    }
+}
+
+// Add event listeners for controls and buttons
+bpmSlider.addEventListener('input', (event) => {
+    updateBPM(event.target.value);
+    saveBPMPreference(event.target.value);
+});
+
+instrumentSelector.addEventListener('change', async (event) => {
+    await initializeAudioContext(); 
+    if (!audioInitialized) {
+        console.error("Audio not initialized. Cannot change instrument yet.");
+        return;
+    }
+    const selectedSoundKey = event.target.value;
+    saveInstrumentPreference(selectedSoundKey);
+    
+    if (Tone.Transport.state === "started") {
+        stopAllAudioPlayback(true);
+    }
+    createOrUpdateSynth(selectedSoundKey); 
+    
+    if (currentProgression) {
+        if (revealButton.disabled) { 
+            revealActualChords(currentProgression);
+        } else { 
+            displayPlaceholderChordBoxes(currentProgression);
+        }
+    }
+    isPlaybackPaused = false;
+    stopResumeButtonText.textContent = "Stop";
+    stopResumeIcon.className = "fas fa-stop";
+    stopResumeButton.disabled = true;
+});
+
+genreSelector.addEventListener('change', () => {
+    saveGenrePreference(genreSelector.value);
+    
+    if (Tone.Transport.state === "started") {
+        stopAllAudioPlayback(true); 
+    }
+    if (currentProgression) {
+        chordProgressionOutput.innerHTML = '';
+        lockContainer.classList.add('hidden');
+        currentProgression = null; 
+        revealButton.disabled = true;
+        stopResumeButtonText.textContent = "Stop";
+        stopResumeIcon.className = "fas fa-stop";
+        stopResumeButton.disabled = true;
+        isPlaybackPaused = false;
+    }
+    playNextButtonText.textContent = "Start / Next";
+    playNextButton.querySelector('i').className = 'fas fa-play';
+});
+
+// Add event listeners for main control buttons
+playNextButton.addEventListener('click', handlePlayNextClick);
+stopResumeButton.addEventListener('click', handleStopResumeClick);
+revealButton.addEventListener('click', handleRevealClick);
+
+// Update the initialization to ensure proper order
+(async () => {
+    loadPreferences(); // Load saved preferences first
+    await initializeAudioContext(); // This will create synth with the loaded activeSynthConfigKey
+})();
     </script>
 </body>
 </html>
