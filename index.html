@@ -50,6 +50,92 @@
             50% { transform: scale(1.08); opacity: 0.8; } /* Adjusted scale and opacity */
             100% { transform: scale(1); opacity: 1; }
         }
+        
+        /* Beat indicator styles */
+        .beat-indicators {
+            /* Match chordProgressionOutput exactly */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.25rem; /* gap-1 */
+        }
+        
+        /* Responsive gaps to match Tailwind classes exactly */
+        @media (min-width: 640px) {
+            .beat-indicators {
+                gap: 0.5rem; /* sm:gap-2 */
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .beat-indicators {
+                gap: 0.75rem; /* md:gap-3 */
+            }
+        }
+        
+        .beat-group {
+            display: flex;
+            gap: 0.125rem;
+            /* Match chord box sizing exactly - same as styleChordBox function */
+            flex-grow: 1;
+            flex-basis: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem; /* p-2 */
+        }
+        
+        /* Responsive sizing to match chord boxes exactly */
+        @media (min-width: 640px) {
+            .beat-group {
+                flex: none;
+                min-width: 4.5rem; /* sm:min-w-[4.5rem] */
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .beat-group {
+                flex: none;
+                min-width: 5.5rem; /* md:min-w-[5.5rem] */
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .beat-group {
+                flex: none;
+                min-width: 7rem; /* lg:min-w-[7rem] */
+            }
+        }
+        
+        .beat-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #d1d5db; /* Gray-300 - inactive state */
+            border: 1px solid #9ca3af; /* Gray-400 border */
+            transition: all 0.15s ease-in-out;
+        }
+        
+        .beat-light.active {
+            background-color: #fbbf24; /* Amber-400 - active state */
+            border-color: #f59e0b; /* Amber-500 border */
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        }
+        
+        @media (min-width: 640px) {
+            .beat-light {
+                width: 14px;
+                height: 14px;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .beat-light {
+                width: 16px;
+                height: 16px;
+            }
+        }
+        
         .control-select {
             width: 100%;
             padding: 0.5rem;
@@ -82,34 +168,31 @@
             align-items: center;
             justify-content: center;
             font-size: 0.875rem;
-            /* Match chord box sizing exactly */
+            /* Match chord box sizing exactly - same as styleChordBox function */
             flex-grow: 1;
-            basis: 0;
-            padding: 0.5rem; /* Match p-2 */
+            flex-basis: 0;
+            padding: 0.5rem; /* p-2 */
         }
         
         /* Responsive sizing to match chord boxes exactly */
         @media (min-width: 640px) {
             .lock-button {
                 flex: none;
-                min-width: 4.5rem;
-                padding: 0.5rem; /* Keep consistent with p-2 */
+                min-width: 4.5rem; /* sm:min-w-[4.5rem] */
             }
         }
         
         @media (min-width: 768px) {
             .lock-button {
                 flex: none;
-                min-width: 5.5rem;
-                padding: 0.5rem; /* Keep consistent with p-2 */
+                min-width: 5.5rem; /* md:min-w-[5.5rem] */
             }
         }
         
         @media (min-width: 1024px) {
             .lock-button {
                 flex: none;
-                min-width: 7rem;
-                padding: 0.5rem; /* Keep consistent with p-2 */
+                min-width: 7rem; /* lg:min-w-[7rem] */
             }
         }
 
@@ -126,26 +209,24 @@
             background-color: #d97706; /* Amber-600 on hover */
         }
         .lock-container {
+            /* Match chordProgressionOutput exactly */
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             align-items: center;
+            gap: 0.25rem; /* gap-1 */
             margin-bottom: 0.5rem;
-            gap: 0.25rem;
-            /* Match chord box container styling */
-            flex-wrap: wrap;
-            /* Add matching padding to align with chord progression container */
-            padding: 1rem; /* Match the p-4 on chordProgressionOutput */
         }
         
         /* Responsive gap matching for lock buttons */
         @media (min-width: 640px) {
             .lock-container {
-                gap: 0.5rem; /* Match sm:gap-2 */
+                gap: 0.5rem; /* sm:gap-2 */
             }
         }
         @media (min-width: 768px) {
             .lock-container {
-                gap: 0.75rem; /* Match md:gap-3 */
+                gap: 0.75rem; /* md:gap-3 */
             }
         }
     </style>
@@ -158,12 +239,15 @@
         </header>
 
         <main>
-            <section class="progression-display-area text-center mb-8"> 
+            <section class="progression-display-area text-center mb-8 p-4 bg-green-50 rounded-lg border border-green-200"> 
                 <div id="lockContainer" class="lock-container hidden">
                     <!-- Lock buttons will be inserted here dynamically -->
                 </div>
-                <div id="chordProgressionOutput" class="min-h-[120px] p-4 bg-green-50 rounded-lg border border-green-200 flex flex-wrap justify-center items-center gap-1 sm:gap-2 md:gap-3">
-                    </div>
+                <div id="chordProgressionOutput" class="min-h-[120px] flex flex-wrap justify-center items-center gap-1 sm:gap-2 md:gap-3">
+                </div>
+                <div id="beatIndicators" class="beat-indicators hidden">
+                    <!-- Beat indicator lights will be inserted here dynamically -->
+                </div>
             </section>
 
             <section class="controls-area text-center"> 
@@ -338,6 +422,7 @@
         const instrumentSelector = document.getElementById('instrumentSelector');
         const genreSelector = document.getElementById('genreSelector');
         const lockContainer = document.getElementById('lockContainer');
+        const beatIndicators = document.getElementById('beatIndicators');
         
         let audioInitialized = false;
         let currentProgression = null;
@@ -505,6 +590,59 @@
             }
         }
 
+        function createBeatIndicators(numChords) {
+            beatIndicators.innerHTML = '';
+            
+            for (let chordIndex = 0; chordIndex < numChords; chordIndex++) {
+                const beatGroup = document.createElement('div');
+                beatGroup.className = 'beat-group';
+                
+                for (let beatIndex = 0; beatIndex < HITS_PER_CHORD; beatIndex++) {
+                    const beatLight = document.createElement('div');
+                    beatLight.className = 'beat-light';
+                    beatLight.setAttribute('data-chord-index', chordIndex);
+                    beatLight.setAttribute('data-beat-index', beatIndex);
+                    beatGroup.appendChild(beatLight);
+                }
+                
+                beatIndicators.appendChild(beatGroup);
+            }
+            
+            beatIndicators.classList.remove('hidden');
+        }
+        
+function updateBeatIndicators(currentChordIndex, currentBeatIndex) {
+    const beatLights = beatIndicators.querySelectorAll('.beat-light');
+    
+    beatLights.forEach(light => {
+        const chordIndex = parseInt(light.getAttribute('data-chord-index'));
+        const beatIndex = parseInt(light.getAttribute('data-beat-index'));
+        
+        // Apply chord locking logic to beat indicators
+        let effectiveChordIndex;
+        if (lockedChordIndex !== -1) {
+            // If a chord is locked, only show beats for that chord
+            effectiveChordIndex = lockedChordIndex;
+        } else {
+            // Normal behavior: show beats for current chord
+            effectiveChordIndex = currentChordIndex;
+        }
+        
+        if (chordIndex === effectiveChordIndex && beatIndex === currentBeatIndex) {
+            light.classList.add('active');
+        } else {
+            light.classList.remove('active');
+        }
+    });
+}
+        
+        function clearBeatIndicators() {
+            const beatLights = beatIndicators.querySelectorAll('.beat-light');
+            beatLights.forEach(light => {
+                light.classList.remove('active');
+            });
+        }
+
         function stopAllAudioPlayback(forNewProgression = false) {
             Tone.Transport.stop(0); 
             Tone.Transport.position = 0; 
@@ -521,6 +659,7 @@
                 synth.releaseAll(0); 
             }
             removeChordHighlight();
+            clearBeatIndicators();
             instrumentSelector.disabled = false; 
             genreSelector.disabled = false;
 
@@ -744,6 +883,9 @@
             // Create and show lock buttons
             createLockButtons(progression.chordsDisplay.length);
             lockContainer.classList.remove('hidden');
+            
+            // Create and show beat indicators
+            createBeatIndicators(progression.chordsDisplay.length);
         }
         
         function playProgressionLogic(progression, activeSynthInstance, startRevealed = false) {
@@ -765,7 +907,8 @@
                 for (let i = 0; i < HITS_PER_CHORD; i++) {
                     expandedEvents.push({
                         notes: chordNotes,
-                        originalIdx: originalChordIndex 
+                        originalIdx: originalChordIndex,
+                        beatIdx: i
                     });
                 }
             });
@@ -793,6 +936,9 @@
                 Tone.Draw.schedule(() => {
                     const isRevealedCurrently = revealButton.disabled; 
                     highlightCurrentChord(event.originalIdx, isRevealedCurrently);
+                    
+                    // Update beat indicators - show the current beat position
+                    updateBeatIndicators(event.originalIdx, event.beatIdx);
                 }, time); 
             }, expandedEvents, DURATION_PER_HIT);  
 
@@ -815,7 +961,7 @@
             stopResumeButtonText.textContent = "Stop";
             stopResumeIcon.className = "fas fa-stop";
             isPlaybackPaused = false;
-            playNextButtonText.textContent = "Next Progression";
+            playNextButtonText.textContent = "Next Random Progression";
             playNextButton.querySelector('i').className = 'fas fa-step-forward';
         }
 
@@ -961,22 +1107,32 @@ instrumentSelector.addEventListener('change', async (event) => {
     const selectedSoundKey = event.target.value;
     saveInstrumentPreference(selectedSoundKey);
     
-    if (Tone.Transport.state === "started") {
-        stopAllAudioPlayback(true);
+    // Store the current playback state before stopping
+    const wasPlaying = (Tone.Transport.state === "started");
+    const wasRevealed = revealButton.disabled;
+    
+    if (wasPlaying) {
+        stopAllAudioPlayback(false); // Don't reset for new progression
     }
     createOrUpdateSynth(selectedSoundKey); 
     
     if (currentProgression) {
-        if (revealButton.disabled) { 
+        if (wasRevealed) { 
             revealActualChords(currentProgression);
         } else { 
             displayPlaceholderChordBoxes(currentProgression);
         }
+        
+        // If it was playing, resume automatically with new instrument
+        if (wasPlaying) {
+            playProgressionLogic(currentProgression, synth, wasRevealed);
+        } else if (isPlaybackPaused) {
+            // If it was paused, keep it paused but ready to resume
+            stopResumeButton.disabled = false;
+            stopResumeButtonText.textContent = "Resume";
+            stopResumeIcon.className = "fas fa-play";
+        }
     }
-    isPlaybackPaused = false;
-    stopResumeButtonText.textContent = "Stop";
-    stopResumeIcon.className = "fas fa-stop";
-    stopResumeButton.disabled = true;
 });
 
 genreSelector.addEventListener('change', () => {
@@ -988,6 +1144,7 @@ genreSelector.addEventListener('change', () => {
     if (currentProgression) {
         chordProgressionOutput.innerHTML = '';
         lockContainer.classList.add('hidden');
+        beatIndicators.classList.add('hidden');
         currentProgression = null; 
         revealButton.disabled = true;
         stopResumeButtonText.textContent = "Stop";
